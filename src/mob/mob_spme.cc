@@ -167,6 +167,7 @@ void MobSpme::BuildSparseReal(const double *pos, const double *rdi)
                     double xa;
                     double ya;
                     detail::scalars_ewald_F(xi_, r, aa, ab, &xa, &ya);
+                    /*
                     if (r < (aa + ab))  {
                         xa += -(1.5 - (aa2 + ab2) * 0.5 / rr) / r +
                                 2.0 / (aa + ab) - 3.0 * r / 8.0 / (aa2 + ab2);
@@ -185,6 +186,53 @@ void MobSpme::BuildSparseReal(const double *pos, const double *rdi)
                     val[k * 9 + 6] = (xa - ya) * ex * ez;
                     val[k * 9 + 7] = (xa - ya) * ey * ez;
                     val[k * 9 + 8] = (xa - ya) * ez * ez + ya;
+                    */
+
+
+                    //Xin's correction
+                    double ex = rx / r;
+                    double ey = ry / r;
+                    double ez = rz / r;
+
+                    double rinv  = 1.0 / r;
+                    double rinv3 = rinv * rinv * rinv;
+                    double t1, t2;
+                    double tmp0 = (aa2 + ab2) / rr;
+                    double tmp1 = 0.75 * rinv * (1.0 + tmp0 / 3.0);
+                    double tmp2 = 0.75 * rinv * (1.0 - tmp0);
+                    double diff_aij = aa - ab;
+
+                    if (r > aa + ab) 
+                    {
+                        // So t1 and t2 will be 0 
+                        t1 = tmp1;
+                        t2 = tmp2;
+                    }
+                    else if (r > abs(diff_aij))
+                    {
+                        double tmp3 = rinv3 / (32.0 * aa * ab);
+                        t1 = diff_aij * diff_aij + 3.0 * rr;
+                        t1 = (16.0 * rr*r * (aa + ab) - t1 * t1) * tmp3;
+                        t2 = diff_aij * diff_aij - rr;
+                        t2 = 3.0 * t2 * t2 * tmp3;
+                    }
+                    else
+                    {
+                        t1 = 1.0 / (aa > ab ? aa : ab);
+                        t2 = 0;
+                    }
+                    t1 -= tmp1;
+                    t2 -= tmp2;
+
+                    val[k * 9 + 0] = (xa - ya + t2) * ex * ex + ya + t1;
+                    val[k * 9 + 1] = (xa - ya + t2) * ex * ey;
+                    val[k * 9 + 2] = (xa - ya + t2) * ex * ez;
+                    val[k * 9 + 3] = (xa - ya + t2) * ex * ey;
+                    val[k * 9 + 4] = (xa - ya + t2) * ey * ey + ya + t1;
+                    val[k * 9 + 5] = (xa - ya + t2) * ey * ez;
+                    val[k * 9 + 6] = (xa - ya + t2) * ex * ez;
+                    val[k * 9 + 7] = (xa - ya + t2) * ey * ez;
+                    val[k * 9 + 8] = (xa - ya + t2) * ez * ez + ya + t1;
                 } else {
                     val[k * 9 + 0] = self_a;
                     val[k * 9 + 1] = 0.0;

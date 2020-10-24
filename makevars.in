@@ -8,8 +8,8 @@ RANLIB = ranlib
 MEX    = mex
 MEXEXT = mexa64
 
-CXXFLAGS  = -O3 -Wall -w2
-CXXFLAGS += -openmp
+CXXFLAGS  = -O2 -Wall -w2
+CXXFLAGS += -qopenmp
 CXXFLAGS += -mkl
 CXXFLAGS += -std=c++11
 CXXFLAGS += -Wsign-compare -Wunknown-pragmas -Wreturn-type
@@ -19,7 +19,7 @@ CXXFLAGS += -qno-offload
 CXXFLAGS += -DENABLE_PROFILE_
 MKLROOT = /opt/intel/mkl/
 
-MEXFLAGS = CXXFLAGS="-O3 -Wall -fPIC -w2 -openmp -std=c++11 -qno-offload\
+MEXFLAGS = CXXFLAGS="-O3 -Wall -fPIC -w2 -qopenmp -std=c++11 -qno-offload\
            -I${TOPDIR}/install/include" \
 	   LDFLAGS="-static-intel -mkl -liomp5 -lm"
 

@@ -118,6 +118,7 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
     double *k3_tbl = ewald_tbl->k3_tbl;
     double *k_tbl  = ewald_tbl->k_tbl;
     double *kexp_tbl = ewald_tbl->kexp_tbl;
+    printf("XIN1\n");
     #pragma omp parallel
     {
         __declspec(align(detail::kAlignLen)) int lm0[nr + detail::kSimdWidth];        
@@ -148,6 +149,7 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                     double xx0 = drem(pos2[0] - pos1[0], box_size);
                     double yy0 = drem(pos2[1] - pos1[1], box_size);
                     double zz0 = drem(pos2[2] - pos1[2], box_size);
+
                     // self part
                     double real0 = 0.0;
                     double real1 = 0.0;
@@ -166,14 +168,16 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                         }
                         // real part
                         int nr0 = 0;
-                        for (int m = 0; m < nr; m++) {
+                        for (int m = 0; m < nr; m++) 
+                        {
                             double xx = xx0 + rlx_tbl[m];
                             double yy = yy0 + rly_tbl[m];
                             double zz = zz0 + rlz_tbl[m];
                             double rr = xx * xx + yy * yy + zz * zz;
-                            if (rr != 0.0 && rr <= rmax2) {
+                            if (rr > 1e-14 && rr <= rmax2) {
                                 double r = sqrt(rr);
                                 lm0[nr0++] = m;
+                                /*
                                 if (r < (aa + ab)) {
                                     double xa = 
                                         -(1.5 - (aa2 + ab2) * 0.5 / rr)/r +
@@ -193,6 +197,44 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                                     real4 += (xa - ya) * ey * ez;
                                     real5 += (xa - ya) * ez * ez + ya;
                                 }
+                                */
+                                double rinv  = 1.0 / r;
+                                double rinv3 = rinv * rinv * rinv;
+                                double t1, t2;
+                                double tmp0 = (aa2 + ab2) / rr;
+                                double tmp1 = 0.75 * rinv * (1.0 + tmp0 / 3.0);
+                                double tmp2 = 0.75 * rinv * (1.0 - tmp0);
+                                double diff_aij = aa - ab;
+                             
+                                if (r > aa + ab || i == j) 
+                                {
+                                    t1 = tmp1;
+                                    t2 = tmp2;
+                                }
+                                else if (r > abs(diff_aij))
+                                {
+                                    double tmp3 = rinv3 / (32.0 * aa * ab);
+                                    t1 = diff_aij * diff_aij + 3.0 * rr;
+                                    t1 = (16.0 * rr*r * (aa + ab) - t1 * t1) * tmp3;
+                                    t2 = diff_aij * diff_aij - rr;
+                                    t2 = 3.0 * t2 * t2 * tmp3;
+                                }
+                                else
+                                {
+                                    t1 = 1.0 / (aa > ab ? aa : ab);
+                                    t2 = 0;
+                                }
+                                t1 -= tmp1;
+                                t2 -= tmp2;
+                                double ex = xx / r;
+                                double ey = yy / r;
+                                double ez = zz / r;
+                                real0 += t2 * ex * ex + t1;
+                                real1 += t2 * ex * ey;
+                                real2 += t2 * ex * ez;
+                                real3 += t2 * ey * ey + t1;
+                                real4 += t2 * ey * ez;
+                                real5 += t2 * ez * ez + t1;
                             }
                         }
                         #pragma vector aligned
@@ -203,7 +245,7 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                             double yy = yy0 + rly_tbl[mmm];
                             double zz = zz0 + rlz_tbl[mmm];
                             double rr = xx * xx + yy * yy + zz * zz;
-                            double r = sqrt(rr);
+                            double r  = sqrt(rr);
                             double ex = xx / r;
                             double ey = yy / r;
                             double ez = zz / r;
@@ -390,6 +432,7 @@ void EwaldVectorKernel(const double xi, const EwaldTable *ewald_tbl,
                 double xx0 = drem(pos2[0] - pos1[0], box_size);
                 double yy0 = drem(pos2[1] - pos1[1], box_size);
                 double zz0 = drem(pos2[2] - pos1[2], box_size);
+
                 // self part
                 double real0 = 0.0;
                 double real1 = 0.0;
@@ -417,6 +460,7 @@ void EwaldVectorKernel(const double xi, const EwaldTable *ewald_tbl,
                         if (rr != 0.0 && rr <= rmax2) {
                             double r = sqrt(rr);
                             lm0[nr0++] = m;
+                            /*
                             if (r < (aa + ab)) {
                                 double xa = -(1.5 - (aa2 + ab2) * 0.5 / rr)/r +
                                     2.0 / (aa + ab) -
@@ -434,6 +478,44 @@ void EwaldVectorKernel(const double xi, const EwaldTable *ewald_tbl,
                                 real4 += (xa - ya) * ey * ez;
                                 real5 += (xa - ya) * ez * ez + ya;
                             }
+                            */
+                            double rinv  = 1.0 / r;
+                            double rinv3 = rinv * rinv * rinv;
+                            double t1, t2;
+                            double tmp0 = (aa2 + ab2) / rr;
+                            double tmp1 = 0.75 * rinv * (1.0 + tmp0 / 3.0);
+                            double tmp2 = 0.75 * rinv * (1.0 - tmp0);
+                            double diff_aij = aa - ab;
+
+                            if (r > aa + ab || i == j) 
+                            {
+                                t1 = tmp1;
+                                t2 = tmp2;
+                            }
+                            else if (r > abs(diff_aij))
+                            {
+                                double tmp3 = rinv3 / (32.0 * aa * ab);
+                                t1 = diff_aij * diff_aij + 3.0 * rr;
+                                t1 = (16.0 * rr*r * (aa + ab) - t1 * t1) * tmp3;
+                                t2 = diff_aij * diff_aij - rr;
+                                t2 = 3.0 * t2 * t2 * tmp3;
+                            }
+                            else
+                            {
+                                t1 = 1.0 / (aa > ab ? aa : ab);
+                                t2 = 0;
+                            }
+                            t1 -= tmp1;
+                            t2 -= tmp2;
+                            double ex = xx / r;
+                            double ey = yy / r;
+                            double ez = zz / r;
+                            real0 += t2 * ex * ex + t1;
+                            real1 += t2 * ex * ey;
+                            real2 += t2 * ex * ez;
+                            real3 += t2 * ey * ey + t1;
+                            real4 += t2 * ey * ez;
+                            real5 += t2 * ez * ez + t1;
                         }
                     }
                     #pragma vector aligned

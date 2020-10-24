@@ -3,8 +3,8 @@
  * @brief  Logger definition
  */
 
-#ifndef LOG_H_
-#define LOG_H_
+#ifndef _LOG_H_
+#define _LOG_H_
 
 
 #include <cstdio>
@@ -52,17 +52,17 @@ void SetLoggerLevel(int level);
         do {                                                      \
             if (stokesdt::detail::fp_log != NULL) {               \
                 fprintf(stokesdt::detail::fp_log,                 \
-                        "ERROR: %s:%d: %s(): "fmt, __FILE__,      \
+                        "ERROR: %s:%d: %s(): " fmt, __FILE__,      \
                         __LINE__, __func__, ##args);              \
                 fflush(stokesdt::detail::fp_log);                 \
             }                                                     \
-            fprintf(stderr, "ERROR: %s:%d: %s(): "fmt, __FILE__,  \
+            fprintf(stderr, "ERROR: %s:%d: %s(): " fmt, __FILE__,  \
                 __LINE__, __func__, ##args);                      \
             fflush(stderr);                                       \
         } while (0)
 
 /// Write an warning message into the log file   
-#define LOG_WARN(fmt, args...)  LOG(1, "WARNING: "fmt, ##args);
+#define LOG_WARN(fmt, args...)  LOG(1, "WARNING: " fmt, ##args);
 
         
 #endif // LOG_H_

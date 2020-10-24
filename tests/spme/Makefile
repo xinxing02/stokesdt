@@ -1,6 +1,6 @@
 include ../../makevars.in
 
-TARGET  = testspme
+TARGET  = testspme 
 
 SRC     = $(notdir $(wildcard *.cc))
 OBJS    = $(addsuffix .o, $(basename $(SRC)))  
