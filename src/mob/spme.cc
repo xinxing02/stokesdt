@@ -984,7 +984,7 @@ void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
     int npos = spme->npos;
     for (int i = 0; i < spme->mic_numdevs; i++) {
         #pragma offload target(mic: i)\
-                in(pos :length(3*npos) ONCE)\ 
+                in(pos :length(3*npos) ONCE)\
                 nocopy(spme_mic)
         UpdateSpmeEngine_(pos, spme_mic);
     }

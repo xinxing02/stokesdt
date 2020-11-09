@@ -128,7 +128,7 @@ int main(int argc, char **argv)
             // update cov
             #pragma omp parallel for
             for (int p = 0; p < nm; p++) {
-                #pragma simd
+                #pragma omp simd
                 for (int q = 0; q < nm; q++) {
                     cov[p * ldm + q] += y[k * ldm + p] * y[k * ldm + q];
                 }

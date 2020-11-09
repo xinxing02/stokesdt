@@ -49,7 +49,7 @@ void PrintProfiler();
 } // namespace stokesdt
 
 
-#ifdef ENABLE_PROFILE_
+#ifdef ENABLE_PROFILE
 
 #define START_TIMER(idx)                                      \
         do {                                                  \
@@ -69,7 +69,7 @@ void PrintProfiler();
         
 #define STOP_TIMER(idx)
         
-#endif // #ifdef ENABLE_PROFILE_
+#endif // #ifdef ENABLE_PROFILE
 
 
 #endif //  PROFILE_H_

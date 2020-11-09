@@ -1,0 +1,11 @@
+*.o
+*.a
+install/*
+bin/main/stokesdt
+bin/spme/run_spme
+tests/ewald/mob.dat
+tests/ewald/testewald
+tests/spme/testspme
+tests/lanczos/testlanczos
+tests/steric/teststeric
+tests/random/testrandom

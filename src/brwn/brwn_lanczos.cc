@@ -55,7 +55,7 @@ int BrwnLanczos::Lanczos(MobBase *mob,
         cblas_dcopy(iter, e0, 1, e1, 1);
         LAPACKE_dstev(LAPACK_ROW_MAJOR, 'V', iter + 1, d1, e1, h2, ldh);
         #pragma vector aligned
-        #pragma simd
+        #pragma omp simd
         for (int j = 0; j < iter + 1; j++) {
             e1[j] = h2[j] * sqrt(d1[j]);
         }
@@ -167,7 +167,7 @@ int BrwnLanczos::BlockLanczos(MobBase *mob,
         LAPACKE_dsbev(LAPACK_ROW_MAJOR, 'V', 'L', (iter + 1) * num_rhs, kd,
                       band1, ldh, D, H2, ldh);
         for (int j = 0; j < num_rhs; j++) {
-            #pragma simd
+            #pragma omp simd
             for (int k = 0; k < (iter + 1) * num_rhs; k++) {
                 band1[j * ldh + k] = H2[j * ldh + k] * sqrt(D[k]);
             }

@@ -118,7 +118,6 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
     double *k3_tbl = ewald_tbl->k3_tbl;
     double *k_tbl  = ewald_tbl->k_tbl;
     double *kexp_tbl = ewald_tbl->kexp_tbl;
-    printf("XIN1\n");
     #pragma omp parallel
     {
         __declspec(align(detail::kAlignLen)) int lm0[nr + detail::kSimdWidth];        
