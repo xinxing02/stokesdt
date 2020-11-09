@@ -15,24 +15,12 @@ namespace stokesdt {
 
 namespace detail {
 
-#if defined (__MIC__)
-const int kSplineLen = 4;
-#elif defined (__AVX__) 
+#if defined (__AVX__) 
 const int kSplineLen = 1;
 #elif defined (__SSE__)
 const int kSplineLen = 1;
 #else
 const int kSplineLen = 1;
-#endif
-
-#ifdef __INTEL_OFFLOAD
-#include <offload.h>
-#pragma offload_attribute(push, target(mic))
-SpmeEngine *spme_mic;
-#define ALLOC alloc_if(1) free_if(0)
-#define REUSE alloc_if(0) free_if(0)
-#define ONCE  alloc_if(1) free_if(1)
-#define FREE  alloc_if(0) free_if(1)
 #endif
 
 
@@ -364,8 +352,7 @@ static void Spread(const double *rdi,
 }
 
 
-static void UpdateSpmeEngine_(const double *pos,
-                              SpmeEngine *spme)
+void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
 {
     int npos = spme->npos;
     double pidx[npos];
@@ -510,13 +497,10 @@ static void UpdateSpmeEngine_(const double *pos,
 }
 
 
-static bool CreateSpmeEngine_(const int npos,
-                              const double *rdi,
-                              const double box_size,
-                              const double xi,
-                              const int dim,
-                              const int porder,
-                              SpmeEngine **p_spme)
+bool CreateSpmeEngine(
+    const int npos, const double *rdi, const double box_size, const double xi,
+    const int dim, const int porder, SpmeEngine **p_spme
+)
 {    
     SpmeEngine *spme = new SpmeEngine;
     spme->dim = dim;
@@ -691,9 +675,10 @@ static bool CreateSpmeEngine_(const int npos,
 }
 
 
-static void DestroySpmeEngine_(SpmeEngine *spme)
+void DestroySpmeEngine(SpmeEngine *spme)
 {
-    if (spme != NULL) {
+    if (spme != NULL) 
+    {
         DftiFreeDescriptor(&(spme->fwhandle));
         DftiFreeDescriptor(&(spme->bwhandle));        
         AlignFree(spme->map);
@@ -704,26 +689,17 @@ static void DestroySpmeEngine_(SpmeEngine *spme)
         free(spme->head);
         free(spme->bidx);
         free(spme->next);
-        if (spme->rdi2 != NULL) {
-            AlignFree(spme->rdi2);
-        }
+        if (spme->rdi2 != NULL) AlignFree(spme->rdi2);
     }
     delete spme;
 }
 
 
-static void ComputeSpmeRecip_(const SpmeEngine *spme,
-                              const int nrhs,
-                              const double alpha,                              
-                              const int ldin,
-                              const double *vec_in,
-                              const double beta,
-                              const int ldout,
-                              double *vec_out)
+void ComputeSpmeRecip(
+    const SpmeEngine *spme, const int nrhs, const double alpha, const int ldin, 
+    const double *vec_in, const double beta, const int ldout, double *vec_out
+)
 {
-#ifdef __INTEL_OFFLOAD
-    int idev = _Offload_get_device_number();
-#endif
     int npos = spme->npos;
     double box_size = spme->box_size;
     int ld1 = spme->ld1;
@@ -837,159 +813,6 @@ static void ComputeSpmeRecip_(const SpmeEngine *spme,
             
         }
     }
-}
-
-
-#ifdef __INTEL_OFFLOAD
-#pragma offload_attribute(pop)
-#endif
-
-
-bool CreateSpmeEngine(const int npos,
-                      const double *rdi,
-                      const double box_size,
-                      const double xi,
-                      const int dim,
-                      const int porder,
-                      SpmeEngine **p_spme)
-{
-    bool ret;
-    ret = CreateSpmeEngine_(npos, rdi, box_size, xi, dim, porder, p_spme);
-    if (!ret) {
-        return false;
-    }
-    
-#ifdef __INTEL_OFFLOAD
-    int nbcpu = 1;
-    int nbmic = 1;
-    int mic_numdevs = _Offload_number_of_devices();;
-    int nbs = nbmic * mic_numdevs + nbcpu;
-    p_spme[0]->nbs = nbs;
-    p_spme[0]->nbcpu = nbcpu;
-    p_spme[0]->nbmic = nbmic;
-    p_spme[0]->mic_numdevs = mic_numdevs;
-
-    if (NULL == rdi) {
-        for (int i = 0; i < mic_numdevs; i++) {
-            #pragma offload target(mic: i)\
-                    in(xi, dim, porder, npos, box_size)\
-                    in(rdi :length(npos) ONCE)\
-                    out(ret) nocopy(spme_mic)
-            ret = CreateSpmeEngine_(npos, rdi, box_size,
-                                    xi, dim, porder, &spme_mic);
-            if (!ret) {
-                return false;
-            }
-        }
-    } else {
-        for (int i = 0; i < mic_numdevs; i++) {
-            #pragma offload target(mic: i)\
-                    in(xi, dim, porder, npos, box_size)\
-                    in(rdi :length(npos) ONCE)\
-                    out(ret) nocopy(spme_mic)
-            ret = CreateSpmeEngine_(npos, rdi, box_size,
-                                    xi, dim, porder, &spme_mic);
-            if (!ret) {
-                return false;
-            }
-        }    
-    }
-#endif
-
-    return true;
-}
-
-
-void DestroySpmeEngine(SpmeEngine *spme)
-{
-#ifdef __INTEL_OFFLOAD
-    for (int i = 0; i < spme->mic_numdevs; i++) {
-        #pragma offload target(mic: i)\
-                nocopy(spme_mic)
-        DestroySpmeEngine_(spme_mic);
-    }
-#endif
-    DestroySpmeEngine_(spme);
-}
-
-    
-void ComputeSpmeRecip(const SpmeEngine *spme,
-                      const int nrhs,
-                      const double alpha,                              
-                      const int ldin,
-                      const double *vec_in,
-                      const double beta,
-                      const int ldout,
-                      double *vec_out)
-{  
-#ifdef __INTEL_OFFLOAD
-    int nbmic = spme->nbmic;
-    int nbcpu = spme->nbcpu;
-    int nbs = spme->nbs;
-    int nm = spme->npos * 3;
-    int mic_numdevs = spme->mic_numdevs;
-    int niters = (nrhs + nbs - 1) / nbs;
-    int idx = 0;
-    for (int i = 0; i < niters; i++) {
-        int workdevs = 0;
-        if (nbmic != 0 && nrhs != 1) {
-            workdevs = 0;
-            for (int j = 0; j < mic_numdevs; j++) {
-                int size = idx + nbmic > nrhs ? nrhs - idx : nbmic;   
-                const double *f = &(vec_in[idx * ldin]);
-                double *v = &(vec_out[idx * ldout]);
-
-                #pragma offload target(mic:j) signal(j)\
-                            in(alpha, beta, ldin, ldout, size)\
-                            in(f :length(ldin*size) ONCE)\
-                            inout(v :length(ldout*size) ONCE)\
-                            nocopy(spme_mic)
-                ComputeSpmeRecip_(spme_mic, nrhs, alpha, ldin, f,
-                                  beta, ldout, v);                
-                workdevs++;
-                idx += size;
-                if (idx == nrhs) {
-                    break;
-                }
-            }
-        }
-
-        // CPU work concurrently
-        if (idx != nrhs && nbcpu != 0) {
-            int size = idx + nbcpu > nrhs ? nrhs - idx : nbcpu;
-            ComputeSpmeRecip_(spme, nrhs, alpha, ldin, &(vec_in[idx * ldin]),
-                              beta, ldout, &(vec_out[idx * ldout]));
-            idx += size;
-        }
-         
-        // wait for complete
-        for (int j = 0; j < workdevs; j++) {
-            #pragma offload_wait target(mic:j) wait(j)
-        }
-        
-        if (idx == nrhs) {
-            break;
-        }
-    }
-#else
-    ComputeSpmeRecip_(spme, nrhs, alpha, ldin,
-                      vec_in, beta, ldout, vec_out);
-#endif // #ifdef __INTEL_OFFLOAD
-}
-
-
-void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
-{
-#ifdef __INTEL_OFFLOAD
-    int npos = spme->npos;
-    for (int i = 0; i < spme->mic_numdevs; i++) {
-        #pragma offload target(mic: i)\
-                in(pos :length(3*npos) ONCE)\
-                nocopy(spme_mic)
-        UpdateSpmeEngine_(pos, spme_mic);
-    }
-#endif
-    UpdateSpmeEngine_(pos, spme);
 }
 
 } // namespace stokesdt

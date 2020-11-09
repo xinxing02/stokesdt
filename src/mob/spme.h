@@ -22,12 +22,6 @@ namespace detail {
  *  @brief   SPME engine
  */
 typedef struct SpmeEngine {
-#ifdef __INTEL_OFFLOAD
-    int mic_numdevs;
-    int nbmic;
-    int nbcpu;
-    int nbs;
-#endif
     /// the Ewald parameter
     double xi;
     /// the number of particles
@@ -81,12 +75,7 @@ typedef struct SpmeEngine {
 } SpmeEngine;
 
 
-#ifdef __INTEL_OFFLOAD
-#pragma offload_attribute(push, target(mic))
-#endif
-
-
-const double tab_W[6][6*6]= {
+const double tab_W[6][6*6] = {
   {0.0},
   {0.0},
   {0.0},
@@ -111,8 +100,7 @@ inline size_t FFTPadLen(size_t len, size_t size)
 }
 
 
-inline double ScalarRecip(const double k,
-                          const double xi)
+inline double ScalarRecip(const double k, const double xi)
 {
     double kx = k / xi;
     double kx2 = kx * kx;
@@ -123,14 +111,11 @@ inline double ScalarRecip(const double k,
 }
 
 
-inline void InfluenceKernel(const double *B0,
-                            const double *B1,
-                            const double *B2,
-                            const double *B3,
-                            const double *B4,
-                            const double *B5,
-                            const int ld3,
-                            double *grid)
+inline void InfluenceKernel(
+    const double *B0, const double *B1, const double *B2,
+    const double *B3, const double *B4, const double *B5,
+    const int ld3, double *grid
+)
 {  
 #if defined(__SSE3__)
     // SSE3 kernel
@@ -155,6 +140,7 @@ inline void InfluenceKernel(const double *B0,
     vv2 = _mm_add_pd(_mm_mul_pd(vg1, vB4), vv2);
     vv2 = _mm_add_pd(_mm_mul_pd(vg2, vB5), vv2);
     _mm_store_pd ((double *)(&(grid[2 * ld3])), vv2); 
+/*
 #elif defined(__MIC__) 
     // MIC kernel
     __m512d vB0 = _mm512_mask_loadunpacklo_pd(vB0, 0xAA, B0);
@@ -184,6 +170,7 @@ inline void InfluenceKernel(const double *B0,
     vv2 = _mm512_fmadd_pd(vg1, vB4, vv2);
     vv2 = _mm512_fmadd_pd(vg2, vB5, vv2);
     _mm512_store_pd(&(grid[2 * ld3]), vv2);
+*/
 #else
     // scalar kernel
     double real[3];
@@ -194,39 +181,24 @@ inline void InfluenceKernel(const double *B0,
     imag[1] = grid[1 * ld3 + 1];
     real[2] = grid[2 * ld3 + 0];
     imag[2] = grid[2 * ld3 + 1];
-    grid[0 * ld3 + 0] = B0[0] * real[0] +
-            B1[0] * real[1] +
-            B2[0] * real[2];
-    grid[0 * ld3 + 1] = B0[0] * imag[0] +
-            B1[0] * imag[1] +
-            B2[0] * imag[2];
-    grid[1 * ld3 + 0] = B1[0] * real[0] +
-            B3[0] * real[1] +
-            B4[0] * real[2];
-    grid[1 * ld3 + 1] = B1[0] * imag[0] +
-            B3[0] * imag[1] +
-            B4[0] * imag[2];
-    grid[2 * ld3 + 0] = B2[0] * real[0] +
-            B4[0] * real[1] +
-            B5[0] * real[2];
-    grid[2 * ld3 + 1] = B2[0] * imag[0] +
-            B4[0] * imag[1] +
-            B5[0] * imag[2];
+    grid[0 * ld3 + 0] = B0[0] * real[0] + B1[0] * real[1] + B2[0] * real[2];
+    grid[0 * ld3 + 1] = B0[0] * imag[0] + B1[0] * imag[1] + B2[0] * imag[2];
+    grid[1 * ld3 + 0] = B1[0] * real[0] + B3[0] * real[1] + B4[0] * real[2];
+    grid[1 * ld3 + 1] = B1[0] * imag[0] + B3[0] * imag[1] + B4[0] * imag[2];
+    grid[2 * ld3 + 0] = B2[0] * real[0] + B4[0] * real[1] + B5[0] * real[2];
+    grid[2 * ld3 + 1] = B2[0] * imag[0] + B4[0] * imag[1] + B5[0] * imag[2];
 #endif   
 }
 
 
-inline void InterpolateKernel(const int porder3,                                
-                              const double *P,
-                              const int *ind,
-                              const double alpha,
-                              const double *grid,
-                              const int ld3,                                                            
-                              const double beta,
-                              double *vels)
+inline void InterpolateKernel(
+    const int porder3, const double *P, const int *ind, const double alpha,
+    const double *grid, const int ld3, const double beta, double *vels
+)
 {
     __declspec(align(detail::kAlignLen))
         double tmp[detail::kAlignLen/sizeof(double)];
+/*
 #if defined(__MIC__)
     __m512d vv0 = _mm512_set1_pd(0.0);
     __m512d vv1 = _mm512_set1_pd(0.0);
@@ -248,6 +220,7 @@ inline void InterpolateKernel(const int porder3,
     vels[1] = beta * vels[1] + alpha * tmp[1];
     vels[2] = beta * vels[2] + alpha * tmp[2];
 #else
+*/
     tmp[0] = 0.0;
     tmp[1] = 0.0;
     tmp[2] = 0.0;
@@ -261,7 +234,7 @@ inline void InterpolateKernel(const int porder3,
     vels[0] =  beta * vels[0] + alpha * tmp[0];
     vels[1] =  beta * vels[1] + alpha * tmp[1];
     vels[2] =  beta * vels[2] + alpha * tmp[2];  
-#endif
+//#endif
 }
 
 
@@ -271,7 +244,8 @@ inline void SpreadKernel(const int porder3,
                          const double *forces,                         
                          const int ld3,
                          double *grid)
-{  
+{
+/*
 #if defined(__MIC__)
     __m512d vf0 = _mm512_set1_pd(forces[0]);
     __m512d vf1 = _mm512_set1_pd(forces[1]);
@@ -290,6 +264,7 @@ inline void SpreadKernel(const int porder3,
         _mm512_i32loscatter_pd(&(grid[2 * ld3]), vidx, vg2, _MM_SCALE_8);       
     } 
 #else
+*/
     for (int j = 0; j < porder3; j++) {
         int idx = ind[j];
         double pvalue = P[j];
@@ -297,35 +272,24 @@ inline void SpreadKernel(const int porder3,
         grid[1 * ld3 + idx] += pvalue * forces[1];
         grid[2 * ld3 + idx] += pvalue * forces[2];
     }
-#endif
+//#endif
 }
-
-#ifdef __INTEL_OFFLOAD
-#pragma offload_attribute(pop)
-#endif
 
 
 /// Creates a SPME engine
-bool CreateSpmeEngine(const int npos,
-                      const double *rdi,
-                      const double box_size,
-                      const double xi,
-                      const int dim,
-                      const int porder,
-                      SpmeEngine **p_spme);
+bool CreateSpmeEngine(
+    const int npos, const double *rdi, const double box_size, const double xi,
+    const int dim, const int porder, SpmeEngine **p_spme
+);
 
 /// Destroys the SPME engine
 void DestroySpmeEngine(SpmeEngine *spme);
 
 /// Computes the reciprocal-space sum    
-void ComputeSpmeRecip(const SpmeEngine *spme,
-                      const int nrhs,
-                      const double alpha,                              
-                      const int ldin,
-                      const double *vec_in,
-                      const double beta,
-                      const int ldout,
-                      double *vec_out);
+void ComputeSpmeRecip(
+    const SpmeEngine *spme, const int nrhs, const double alpha, const int ldin,
+    const double *vec_in, const double beta, const int ldout, double *vec_out
+);
 
 /// Updates the particles and reconstruct the P matrix   
 void UpdateSpmeEngine(const double *pos, SpmeEngine *spme);

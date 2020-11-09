@@ -15,9 +15,12 @@ namespace stokesdt {
 namespace detail {
     
 /// the SIMD width
+    /*
 #if defined (__MIC__)
 const int kSimdWidth = 64;
 #elif defined (__AVX__)
+*/
+#if defined(__AVX__)
 const int kSimdWidth = 32;
 #elif defined (__SSE__)
 const int kSimdWidth = 16;
