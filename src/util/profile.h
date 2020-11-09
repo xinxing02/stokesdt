@@ -52,7 +52,7 @@ void PrintProfiler();
 #ifdef ENABLE_PROFILE_
 
 #define START_TIMER(idx)                                      \
-        do {                                                  \            
+        do {                                                  \
             stokesdt::detail::stokes_stime[idx]  = __rdtsc(); \
         } while ( 0 )
         

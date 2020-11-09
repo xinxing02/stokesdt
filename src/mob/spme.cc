@@ -4,9 +4,9 @@
  */
 
 #include <mkl.h>
-#include <offload.h>
 #include <stdint.h>
 #include <string.h>
+#include <omp.h>
 
 #include "spme.h"
 
@@ -26,6 +26,7 @@ const int kSplineLen = 1;
 #endif
 
 #ifdef __INTEL_OFFLOAD
+#include <offload.h>
 #pragma offload_attribute(push, target(mic))
 SpmeEngine *spme_mic;
 #define ALLOC alloc_if(1) free_if(0)
@@ -230,7 +231,7 @@ static void ApplyInfluence(const int flag,
             const double *mm = &(lm2[j * ld1c]);
             double kyz = ky*ky + kz*kz;
             if (flag == 0) {
-                #pragma simd
+                #pragma omp simd
                 for (int x = 0; x <= dim/2; x++) {
                     double kx = map[x];
                     double m2 = mm[x];
@@ -251,7 +252,7 @@ static void ApplyInfluence(const int flag,
                     B5[x] = m2 - m2 * ezz; // 8
                 }
             } else if (flag == 1) {
-                #pragma simd
+                #pragma omp simd
                 for (int x = 0; x <= dim/2; x++) {
                     double kx = map[x];
                     double m2 = mm[x];
@@ -271,7 +272,7 @@ static void ApplyInfluence(const int flag,
                     B5[x] = m2 - m2 * ezz; // 8
                 }            
             } else if (flag == 2) {
-                #pragma simd
+                #pragma omp simd
                 for (int x = 0; x <= dim/2; x++) {
                     double kx = map[x];
                     double m2 = mm[x];

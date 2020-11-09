@@ -238,7 +238,7 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                             }
                         }
                         #pragma vector aligned
-                        #pragma simd
+                        #pragma omp simd
                         for (int m = 0; m < nr0; m++) {
                             int mmm = lm0[m];
                             double xx = xx0 + rlx_tbl[mmm];
@@ -292,7 +292,7 @@ void EwaldKernel(const double xi, const EwaldTable *ewald_tbl,
                     double recip5 = 0.0;
                     if (mat != NULL || mat_recip != NULL) {
                         #pragma vector aligned
-                        #pragma simd
+                        #pragma omp simd
                         for (int m = 0; m < nk; m++) {
                             double ex   = ex_tbl[m];
                             double ey   = ey_tbl[m];
@@ -519,7 +519,7 @@ void EwaldVectorKernel(const double xi, const EwaldTable *ewald_tbl,
                         }
                     }
                     #pragma vector aligned
-                    #pragma simd
+                    #pragma omp simd
                     for (int m = 0; m < nr0; m++) {
                         int mmm = lm0[m];
                         double xx = xx0 + rlx_tbl[mmm];
@@ -562,7 +562,7 @@ void EwaldVectorKernel(const double xi, const EwaldTable *ewald_tbl,
                 double recip5 = 0.0;
                 if (v != NULL || v_recip != NULL) {
                     #pragma vector aligned
-                    #pragma simd
+                    #pragma omp simd
                     for (int m = 0; m < nk; m++) {
                         double ex   = ex_tbl[m];
                         double ey   = ey_tbl[m];

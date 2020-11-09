@@ -8,10 +8,8 @@ RANLIB = ranlib
 MEX    = mex
 MEXEXT = mexa64
 
-CXXFLAGS  = -O2 -Wall -w2
-CXXFLAGS += -qopenmp
+CXXFLAGS  = -O2 -Wall -fopenmp -std=c++11
 CXXFLAGS += -mkl
-CXXFLAGS += -std=c++11
 CXXFLAGS += -Wsign-compare -Wunknown-pragmas -Wreturn-type
 CXXFLAGS += -Wunused-variable -Wuninitialized
 CXXFLAGS += -Wmissing-prototypes -Wmissing-declarations
