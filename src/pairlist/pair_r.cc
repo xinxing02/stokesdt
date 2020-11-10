@@ -76,9 +76,18 @@ int PairListR::InitPairs(const double *rdi,
     double max_radius = get_max_radius();
     double min_radius = get_min_radius();
     
+    // huangh223, 2020-Nov-10:
+    // We reserve a small capacity for each vector and return a small nnz here:
+    // (1) The estimated nnz is usually >> actual nnz and consumes a lot of memory.
+    // (2) New elements will be pushed back into a vector in PairListR::FindPairs.
+    // (3) The returned nnz is only used for initializing the sparse matrix and the 
+    //     sparse matrix will be resized later.
+	
     int nnz = 0;
     (*pairs).resize(npos);
-    for (int i = 0; i < npos; i++) {
+    #if 0
+    for (int i = 0; i < npos; i++)
+    {
         double t1 = pow(cutoff + max_radius, 3.0);
         double t2 = pow(rdi[i], 3.0);
         double t3 = pow(min_radius, 3.0);
@@ -87,6 +96,10 @@ int PairListR::InitPairs(const double *rdi,
         (*pairs)[i].reserve(size);
         nnz += size;
     }
+    #else
+    for (int i = 0; i < npos; i++) (*pairs)[i].reserve(64);
+    nnz = npos * 64;
+    #endif
     
     return nnz;
 }

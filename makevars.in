@@ -8,7 +8,7 @@ RANLIB = ranlib
 MEX    = mex
 MEXEXT = mexa64
 
-CXXFLAGS  = -O2 -Wall -g -fopenmp -std=c++11 -DENABLE_PROFILE
+CXXFLAGS  = -O3 -Wall -g -fopenmp -std=c++11 -xHost -DENABLE_PROFILE
 CXXFLAGS += -mkl
 MKLROOT  ?= /opt/intel/mkl/
 

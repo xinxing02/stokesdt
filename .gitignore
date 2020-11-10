@@ -9,3 +9,5 @@ tests/spme/testspme
 tests/lanczos/testlanczos
 tests/steric/teststeric
 tests/random/testrandom
+
+*.udb

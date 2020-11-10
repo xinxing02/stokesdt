@@ -2,6 +2,8 @@
 
 SUBDIR = util brwn force mob simbox pairlist include
 
+default: install
+
 all:
 	@for dir in $(SUBDIR); \
           do \
