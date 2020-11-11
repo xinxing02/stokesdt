@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <getopt.h>
 #include <cstring>
+#include <sys/time.h>
 
 #include "stokes_mob.h"
 #include "stokes_util.h"
@@ -37,6 +38,16 @@ static void usage (char *call)
     fprintf(stderr, "\t--ref                Referenece file\n");  
 }
 
+
+
+double get_wtime_sec()
+{
+    double sec;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    sec = tv.tv_sec + (double) tv.tv_usec / 1000000.0;
+    return sec;
+}
 
 int main(int argc, char **argv)
 {
@@ -93,9 +104,17 @@ int main(int argc, char **argv)
         return -1;
     }
     
-    fprintf(stdout, "\nTest SPME\n");
-    fprintf(stdout, "----------\n");
-    
+    fprintf(stdout, "------------------------\n");
+    fprintf(stdout, "SPME test with %d particles\n", npos);
+    fprintf(stdout, "particle  file: %s\n", xyz_file);
+    fprintf(stdout, "reference file: %s\n", ref_file);
+    fprintf(stdout, "xi: %f\n", xi);
+    fprintf(stdout, "rmax: %f\n", rmax);
+    fprintf(stdout, "fftdim: %d\n", dim);
+    fprintf(stdout, "porder: %d\n", porder);
+    fprintf(stdout, "------------------------\n");
+
+
     // input particles
     double *pos = (double *)malloc(sizeof(double) * npos * 3);
     double *rdi = (double *)malloc(sizeof(double) * npos);
@@ -119,8 +138,16 @@ int main(int argc, char **argv)
         for (int j = 0; j < 3; j++)
             fscanf(inf, "%lf,", &pos[i*3+j]);
         fscanf(inf, "%lf\n", &rdi[i]);
+        rdi[i] = (rdi[i] - 1.0) / 9.0  + 1.0;
     }
     fclose(inf);
+    double max_rdi = 0, min_rdi = 1000;
+    for (int i = 0; i < npos; i++)
+    {
+        max_rdi = (rdi[i] > max_rdi) ? rdi[i] : max_rdi;
+        min_rdi = (rdi[i] < min_rdi) ? rdi[i] : min_rdi;
+    }
+    fprintf(stdout, "max/min radii: %f, %f\n", max_rdi, min_rdi);
 
     //  Assuming a cubic box
     double box_size = box_len[0];
@@ -130,17 +157,20 @@ int main(int argc, char **argv)
         pos[i*3+1] -= r_min[1];
         pos[i*3+2] -= r_min[2]; 
     }
-    //printf("14th pts: (%lf, %lf, %lf, %lf)\n", pos[13*3+0], pos[13*3+1], pos[13*3+2], rdi[13]);
-    //printf("512th pts: (%lf, %lf, %lf, %lf)\n", pos[511*3+0], pos[511*3+1], pos[511*3+2], rdi[511]);
 
     //  Matvec check
-    int num_rhs  = 1;
+    int num_rhs  = 5;
+    double start_t, end_t;
+    double build_t, matvec_t;
 
     //  compute spme
-    printf("SPME engine construction\n");
+    start_t = get_wtime_sec();
     MobSpme *mob_spme = new MobSpme(npos, rdi, box_size, xi, rmax, dim, porder);
     assert(mob_spme->Init());
     mob_spme->Update(pos, rdi);
+    end_t = get_wtime_sec();
+    build_t = end_t - start_t;
+    printf("SPME engine construction: %f sec\n", build_t);
 
     // read multiplicand and matvec ref results 
     int nm  = npos * 3;
@@ -167,27 +197,38 @@ int main(int argc, char **argv)
     memset(v_spme, 0, sizeof(double) * ldm * num_rhs);
     double alpha = 1.0;
     double beta  = 0.0;
-    fprintf(stdout, "x10 = %lf\n", x[10]);
-    mob_spme->MulVector(num_rhs, alpha, ldm, x, beta, ldm, v_spme);
-    fprintf(stdout, "x10 = %lf\n", x[10]);
-   
-    printf("SPME:  %lf, %lf, %lf\n%lf, %lf, %lf\n", v_spme[0], ref[0], v_spme[0]/ref[0], v_spme[1], ref[1], v_spme[1]/ref[1]); 
-
-    // check results
-    double error = 0.0;
-    double vnorm = 0.0;
-    for (int i = 0; i < 3 * npos * num_rhs; i++)
+    start_t = get_wtime_sec();
+    for (int i = 0; i < num_rhs; i++)
     {
-        double diff = v_spme[i] - ref[i];
-        error += diff * diff;
-        vnorm += ref[i]*ref[i];
+        mob_spme->MulVector(1, alpha, ldm, x + i*3*npos, beta, ldm, v_spme+i*3*npos);
     }
-    error = sqrt(error);
-    vnorm = sqrt(vnorm);
-    error = error / vnorm;
-    fprintf(stdout, "SPME error = %le\n", error);
+    end_t = get_wtime_sec();
+    matvec_t = (end_t - start_t) / num_rhs;
+    fprintf(stdout, "SPME matvec time with %d matvec: %f sec.\n", num_rhs, matvec_t);
+    
+    // check results
+    double relerr_avg = 0.0;
+    for (int i = 0; i < num_rhs; i++)
+    {
+        double error = 0.0;
+        double vnorm = 0.0;
+        for (int j = 0; j < 3 * npos; j++)
+        {
+            double diff = v_spme[i*3*npos + j] - ref[i*3*npos + j];
+            error += diff * diff;
+            vnorm += ref[i*3*npos + j]*ref[i*3*npos + j];
+        }
+        error = sqrt(error);
+        vnorm = sqrt(vnorm);
+        relerr_avg += error / vnorm;
+    }
+    relerr_avg = relerr_avg / num_rhs;
+    fprintf(stdout, "SPME relative error with %d matvec: %le\n", num_rhs, relerr_avg);
 
-    if (1)
+    fprintf(stdout, "RESULT: %le %f %f\n", relerr_avg, build_t, matvec_t);
+
+
+    if (0)
     {
         printf("\nEwald matrix construction\n");
         fprintf(stdout, "x10 = %lf\n", x[10]);
@@ -213,8 +254,8 @@ int main(int argc, char **argv)
         printf("Ewald: %lf, %lf, %lf\n%lf, %lf, %lf\n", v_ewald[0], ref[0], v_ewald[0]/ref[0], v_ewald[1], ref[1], v_ewald[1]/ref[1]); 
 
         // check results
-        error = 0.0;
-        vnorm = 0.0;
+        double error = 0.0;
+        double vnorm = 0.0;
         double error1 = 0.0;
         double vnorm1 = 0.0;
         for (int i = 0; i < 3 * npos * num_rhs; i++)
@@ -243,18 +284,7 @@ int main(int argc, char **argv)
         free(v_ewald);
         free(v_ewald1);
     }
-
-    /*
-    FILE *log = fopen("./result.dat", "w");
-    for (int i =0; i < 3 * npos * num_rhs; i++)
-        fprintf(log, "%.12f\n", ref[i]);
-    for (int i =0; i < 3 * npos * num_rhs; i++)
-        fprintf(log, "%.12f\n", v_spme[i]);
-    for (int i =0; i < 3 * npos * num_rhs; i++)
-        fprintf(log, "%.12f\n", v_ewald[i]);
-    fclose(log);
-    */
-    
+   
     // clean up
     delete mob_spme;
     free(pos);
