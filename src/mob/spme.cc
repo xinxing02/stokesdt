@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <omp.h>
+#include "log.h"
 
 #include "spme.h"
 
@@ -393,11 +394,14 @@ void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
             double cy = fmod(pos[3 * i + 1], box_size);
             double cz = fmod(pos[3 * i + 2], box_size);
             cx = (cx >= 0.0 ? cx : box_size + cx);
-            cx = (cx >= 0.0 ? cx : box_size + cx);
-            cx = (cx >= 0.0 ? cx : box_size + cx);            
-            cx = pos[i * 3 + 0]/box_size * dim;
-            cy = pos[i * 3 + 1]/box_size * dim;
-            cz = pos[i * 3 + 2]/box_size * dim;
+            cy = (cy >= 0.0 ? cy : box_size + cy);
+            cz = (cz >= 0.0 ? cz : box_size + cz);            
+            //cx = pos[i * 3 + 0]/box_size * dim;
+            //cy = pos[i * 3 + 1]/box_size * dim;
+            //cz = pos[i * 3 + 2]/box_size * dim;
+            cx = cx/box_size * dim;
+            cy = cy/box_size * dim;
+            cz = cz/box_size * dim;
             // independent set
             int bx = (int)(cx/sizeb);
             int by = (int)(cy/sizeb);
@@ -529,6 +533,7 @@ bool CreateSpmeEngine(
     spme->ld3 = dim * pad_dim * pad_dim2;  
     spme->grid = (double *)AlignMalloc(sizeof(double) * spme->ld3 * 3);
     if (NULL == spme->grid) {
+        LOG_ERROR("Creating FFT grid failed\n");
         return false;
     }
     MKL_LONG size[3];
