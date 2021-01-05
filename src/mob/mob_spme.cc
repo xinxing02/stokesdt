@@ -142,7 +142,7 @@ void MobSpme::BuildSparseReal(const double *pos, const double *rdi)
         double xi2 = xi_ * xi_;
         double xiaspi = xi_ / sqrt(M_PI);
         #pragma omp for
-        for (int i = 0; i < npos_; i++) {
+        for (size_t i = 0; i < npos_; i++) {
             double x1 = pos[3 * i + 0];
             double y1 = pos[3 * i + 1];
             double z1 = pos[3 * i + 2];

@@ -159,17 +159,17 @@ static void Interpolate(const int npos,
                         const int ldind,                  
                         const double alpha,
                         const double *grid,
-                        const int ld3,
+                        const size_t ld3,
                         const double beta,
                         double *vels )
 {
-    const int align_dp = kAlignLen/sizeof(double);
+    const size_t align_dp = kAlignLen/sizeof(double);
 
     if (rdi != NULL) {
         #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < npos; i+=align_dp) {
-            int endi = i + align_dp > npos ? npos : i + align_dp;
-            for (int k = i; k < endi; k++) {
+        for (size_t i = 0; i < npos; i+=align_dp) {
+            size_t endi = i + align_dp > npos ? npos : i + align_dp;
+            for (size_t k = i; k < endi; k++) {
                 double alpha0 = rdi[k] * alpha;
                 InterpolateKernel(porder3, &(P[k*ldP]), &(ind[k*ldind]),
                                   alpha0, grid, ld3, beta, &(vels[3*k]));
@@ -177,9 +177,9 @@ static void Interpolate(const int npos,
         }
     } else {
         #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < npos; i+=align_dp) {
-            int endi = i + align_dp > npos ? npos : i + align_dp;
-            for (int k = i; k < endi; k++) {
+        for (size_t i = 0; i < npos; i+=align_dp) {
+            size_t endi = i + align_dp > npos ? npos : i + align_dp;
+            for (size_t k = i; k < endi; k++) {
                 InterpolateKernel(porder3, &(P[k*ldP]), &(ind[k*ldind]),
                                   alpha, grid, ld3, beta, &(vels[3*k]));
             }
@@ -192,13 +192,13 @@ static void ApplyInfluence(const int flag,
                            const int dim,
                            const double *map,
                            const double *lm2,                     
-                           const int ld1,
-                           const int ld2,
-                           const int ld3,
+                           const size_t ld1,
+                           const size_t ld2,
+                           const size_t ld3,
                            double *grid)
 {    
-    int ld1c = ld1/2;
-    int ld2c = ld2/2;
+    size_t ld1c = ld1/2;
+    size_t ld2c = ld2/2;
     
     // grid(x,y,z,:) = B(:,:,x,y,z)*squeeze(grid(x,y,z,:));    
     #pragma omp parallel default(none)\
@@ -283,8 +283,8 @@ static void ApplyInfluence(const int flag,
                 }             
             }
 
-            for (int x = 0; x <= dim/2; x+=kSplineLen) {
-                int i = z * ld2c + y * ld1c + x;
+            for (size_t x = 0; x <= dim/2; x+=kSplineLen) {
+                size_t i = z * ld2c + y * ld1c + x;
                 InfluenceKernel(&(B0[x]), &(B1[x]), &(B2[x]),
                                 &(B3[x]), &(B4[x]), &(B5[x]),
                                 ld3, &(grid[2*i]));
@@ -310,14 +310,14 @@ static void Spread(const double *rdi,
                    const int *ind,
                    const int ldind,
                    const double *forces,
-                   const int ld3,
+                   const size_t ld3,
                    double *grid)
 {    
     int nb3 = nb * nb * nb;
     int n8 = nb3 / 8;
    
     #pragma omp parallel for
-    for (int i = 0; i < ld3 * 3; i++) {
+    for (size_t i = 0; i < ld3 * 3; i++) {
         grid[i] = 0.0;
     }
 
@@ -369,8 +369,8 @@ void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
         int ldind = spme->ldind;
         int *ind = spme->ind;
         int sizeb = spme->sizeb;
-        int ld1 = spme->ld1;
-        int ld2 = spme->ld2;
+        size_t ld1 = spme->ld1;
+        size_t ld2 = spme->ld2;
         int nb = spme->nb;
         int nb2 = nb * nb;
         int nb3 = nb2 * nb;
@@ -389,7 +389,7 @@ void UpdateSpmeEngine(const double *pos, SpmeEngine *spme)
         double g[3];
         double ground[3];
         #pragma omp for schedule(static)
-        for (int i = 0; i < npos; i++) {
+        for (size_t i = 0; i < npos; i++) {
             double cx = fmod(pos[3 * i + 0], box_size);
             double cy = fmod(pos[3 * i + 1], box_size);
             double cz = fmod(pos[3 * i + 2], box_size);
@@ -668,7 +668,7 @@ bool CreateSpmeEngine(
 
     // NUMA
     #pragma omp parallel for schedule(static)
-    for (int i = 0; i < spme->ld3; i++) {
+    for (size_t i = 0; i < spme->ld3; i++) {
         spme->grid[0 * spme->ld3 + i] = 0.0;
         spme->grid[1 * spme->ld3 + i] = 0.0;
         spme->grid[2 * spme->ld3 + i] = 0.0;           
@@ -707,9 +707,9 @@ void ComputeSpmeRecip(
 {
     int npos = spme->npos;
     double box_size = spme->box_size;
-    int ld1 = spme->ld1;
-    int ld2 = spme->ld2;
-    int ld3 = spme->ld3;
+    size_t ld1 = spme->ld1;
+    size_t ld2 = spme->ld2;
+    size_t ld3 = spme->ld3;
     int dim = spme->dim;
     int dim2 = dim * dim;
     int dim3 = dim2 * dim;
@@ -723,7 +723,7 @@ void ComputeSpmeRecip(
     double alpha0 = alpha * (double)dim3/(box_size*box_size*box_size);
 
     if (spme->rdi2 == NULL) {
-        for (int irhs = 0; irhs < nrhs; irhs++) {
+        for (size_t irhs = 0; irhs < nrhs; irhs++) {
             const double *vin = &(vec_in[ldin * irhs]);
             double *vout = &(vec_out[ldout * irhs]);
 
@@ -751,7 +751,7 @@ void ComputeSpmeRecip(
                         alpha0, grid, ld3, beta, vout);
         }
     } else {
-        for (int irhs = 0; irhs < nrhs; irhs++) {
+        for (size_t irhs = 0; irhs < nrhs; irhs++) {
             const double *vin = &(vec_in[ldin * irhs]);
             double *vout = &(vec_out[ldout * irhs]);
 

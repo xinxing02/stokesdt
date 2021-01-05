@@ -138,7 +138,7 @@ int main(int argc, char **argv)
         for (int j = 0; j < 3; j++)
             fscanf(inf, "%lf,", &pos[i*3+j]);
         fscanf(inf, "%lf\n", &rdi[i]);
-        rdi[i] = (rdi[i] - 1.0) / 9.0  + 1.0;
+        rdi[i] = (rdi[i] - 1.0) / 1.0  + 1.0;
     }
     fclose(inf);
     double max_rdi = 0, min_rdi = 1000;

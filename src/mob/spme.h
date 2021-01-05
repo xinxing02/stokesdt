@@ -67,11 +67,11 @@ typedef struct SpmeEngine {
     /// the dimension of the FFT mesh
     int dim;
     /// the first leading dimension of the FFT mesh
-    int ld1;
+    size_t ld1;
     /// the second leading dimension of the FFT mesh
-    int ld2;
+    size_t ld2;
     /// the third leading dimension of the FFT mesh
-    int ld3;
+    size_t ld3;
 } SpmeEngine;
 
 
@@ -114,7 +114,7 @@ inline double ScalarRecip(const double k, const double xi)
 inline void InfluenceKernel(
     const double *B0, const double *B1, const double *B2,
     const double *B3, const double *B4, const double *B5,
-    const int ld3, double *grid
+    const size_t ld3, double *grid
 )
 {  
 #if defined(__SSE3__)
@@ -193,7 +193,7 @@ inline void InfluenceKernel(
 
 inline void InterpolateKernel(
     const int porder3, const double *P, const int *ind, const double alpha,
-    const double *grid, const int ld3, const double beta, double *vels
+    const double *grid, const size_t ld3, const double beta, double *vels
 )
 {
     __declspec(align(detail::kAlignLen))
@@ -224,8 +224,8 @@ inline void InterpolateKernel(
     tmp[0] = 0.0;
     tmp[1] = 0.0;
     tmp[2] = 0.0;
-    for (int j = 0; j < porder3; j++) {
-        int idx = ind[j];
+    for (size_t j = 0; j < porder3; j++) {
+        size_t idx = ind[j];
         double pvalue = P[j];
         tmp[0] += grid[0 * ld3 + idx] * pvalue;
         tmp[1] += grid[1 * ld3 + idx] * pvalue;
@@ -242,7 +242,7 @@ inline void SpreadKernel(const int porder3,
                          const double *P,
                          const int *ind,
                          const double *forces,                         
-                         const int ld3,
+                         const size_t ld3,
                          double *grid)
 {
 /*
@@ -265,8 +265,8 @@ inline void SpreadKernel(const int porder3,
     } 
 #else
 */
-    for (int j = 0; j < porder3; j++) {
-        int idx = ind[j];
+    for (size_t j = 0; j < porder3; j++) {
+        size_t idx = ind[j];
         double pvalue = P[j];
         grid[0 * ld3 + idx] += pvalue * forces[0];
         grid[1 * ld3 + idx] += pvalue * forces[1];
