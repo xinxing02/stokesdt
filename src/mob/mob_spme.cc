@@ -136,9 +136,9 @@ void MobSpme::BuildSparseReal(const double *pos, const double *rdi)
 {    
     #pragma omp parallel
     {
-        int *rowbptr = real_mat_->rowbptr;
+        size_t *rowbptr = real_mat_->rowbptr;
         double *val = real_mat_->val;
-        int *colbidx = real_mat_->colbidx;  
+        size_t *colbidx = real_mat_->colbidx;  
         double xi2 = xi_ * xi_;
         double xiaspi = xi_ / sqrt(M_PI);
         #pragma omp for
@@ -149,10 +149,10 @@ void MobSpme::BuildSparseReal(const double *pos, const double *rdi)
             double aa = rdi[i];
             double aa2 = aa * aa;
             double self_a = 1.0 / aa - xiaspi * (6.0 - 40.0 / 3.0 * xi2 * aa2);
-            int start = rowbptr[i];
-            int end = rowbptr[i + 1];
-            for (int k = start; k < end; k++) {
-                int j = colbidx[k];
+            size_t start = rowbptr[i];
+            size_t end = rowbptr[i + 1];
+            for (size_t k = start; k < end; k++) {
+                size_t j = colbidx[k];
                 if (j != i) {
                     double x2 = pos[3 * j + 0];
                     double y2 = pos[3 * j + 1];
@@ -255,7 +255,7 @@ void MobSpme::Update(const double *pos, const double *rdi)
     START_TIMER(detail::MOB_TICKS);
     
     detail::UpdateSpmeEngine(pos, spme_);
-    int nnz = pair_list_.Build(pos);
+    size_t nnz = pair_list_.Build(pos);
     detail::ResizeSparseMatrix(nnz, real_mat_);
     pair_list_.GetPairs(real_mat_->rowbptr, real_mat_->colbidx);
     BuildSparseReal(pos, rdi);

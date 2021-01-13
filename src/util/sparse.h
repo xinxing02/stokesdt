@@ -20,32 +20,32 @@ namespace detail {
  */
 typedef struct SparseMatrix {
     /// the dimension of the block 
-    int sizeb;
+    size_t sizeb;
     /// <code>sizeb^2</code>
-    int sizeb2;
+    size_t sizeb2;
     /// the number of nonzero blocks
-    int nnzb;
+    size_t nnzb;
     /// the allocated storage capacity
-    int maxnnzb;
+    size_t maxnnzb;
     /// the number of blocks in row dimension
-    int nrowb;
+    size_t nrowb;
     /// the array of nonzero values
     double *val;
     /// the array of block column indices
-    int *colbidx;
+    size_t *colbidx;
     /// the array of block row pointer
-    int *rowbptr;
+    size_t *rowbptr;
 } SparseMatrix;
 
 
 /// Creates a sparse matrix
-bool CreateSparseMatrix(const int nrowb,
-                        const int maxnnzb,
-                        const int sizeb,
+bool CreateSparseMatrix(const size_t nrowb,
+                        const size_t maxnnzb,
+                        const size_t sizeb,
                         SparseMatrix **p_spmat);
 
 /// Resizes the sparse matrix to contain <code>maxnnzb</code> nonzero blocks
-bool ResizeSparseMatrix(const int maxnnzb,
+bool ResizeSparseMatrix(const size_t maxnnzb,
                         SparseMatrix *spmat);
 
 /// Destroys the sparse matrix

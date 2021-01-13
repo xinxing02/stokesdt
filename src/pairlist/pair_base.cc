@@ -123,6 +123,24 @@ int PairListBase::Build(const double *pos)
 }
 
 
+void PairListBase::GetPairs(size_t *rowptr, size_t *colidx)
+{
+    size_t npos = (size_t) npos_;
+    rowptr[0] = 0;
+    for (size_t i = 0; i < npos; i++) {
+        rowptr[i + 1] = rowptr[i] + (size_t) pairs_[i].size();
+    }
+
+    #pragma omp parallel for
+    for (size_t i = 0; i < npos; i++) {
+        size_t start = rowptr[i];
+        size_t end = rowptr[i + 1];
+        for (size_t j = start; j < end; j++) {
+            colidx[j] = (size_t) pairs_[i][(size_t)(j - start)];
+        }
+    }
+}
+
 void PairListBase::GetPairs(int *rowptr, int *colidx)
 {
     rowptr[0] = 0;
@@ -138,5 +156,6 @@ void PairListBase::GetPairs(int *rowptr, int *colidx)
         }
     }
 }
+
 
 } // namespace stokesdt

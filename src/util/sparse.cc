@@ -17,9 +17,9 @@ namespace stokesdt {
 
 namespace detail {
 
-bool CreateSparseMatrix(const int nrowb,
-                        const int maxnnzb,
-                        const int sizeb,
+bool CreateSparseMatrix(const size_t nrowb,
+                        const size_t maxnnzb,
+                        const size_t sizeb,
                         SparseMatrix **p_spmat)
 {
     SparseMatrix *spmat = new SparseMatrix;
@@ -28,8 +28,8 @@ bool CreateSparseMatrix(const int nrowb,
     spmat->nrowb = nrowb;
     spmat->sizeb = sizeb;
     spmat->sizeb2 = sizeb * sizeb;
-    spmat->rowbptr = (int *)AlignMalloc(sizeof(int) * nrowb);
-    spmat->colbidx = (int *)malloc(sizeof(int) * maxnnzb);
+    spmat->rowbptr = (size_t *)AlignMalloc(sizeof(size_t) * nrowb);
+    spmat->colbidx = (size_t *)malloc(sizeof(size_t) * maxnnzb);
     spmat->val = (double *)malloc(sizeof(double) * maxnnzb * sizeb * sizeb);
     if (NULL == spmat->rowbptr ||
         NULL == spmat->colbidx ||
@@ -45,13 +45,13 @@ bool CreateSparseMatrix(const int nrowb,
 }
 
 
-bool ResizeSparseMatrix(const int maxnnzb,
+bool ResizeSparseMatrix(const size_t maxnnzb,
                         SparseMatrix *spmat)
 {
     if (spmat->maxnnzb < maxnnzb) {
-        int sizeb = spmat->sizeb;
+        size_t sizeb = spmat->sizeb;
         spmat->maxnnzb = maxnnzb;           
-        spmat->colbidx = (int *)realloc(spmat->colbidx, sizeof(int) * maxnnzb);
+        spmat->colbidx = (size_t *)realloc(spmat->colbidx, sizeof(size_t) * maxnnzb);
         spmat->val = (double *)malloc(sizeof(double) * maxnnzb * sizeb * sizeb);
         if (NULL == spmat->colbidx ||
             NULL == spmat->val) {
@@ -86,20 +86,20 @@ void SpMV3x3(const SparseMatrix *spmat,
              double *y)
 {
     int nrowb = spmat->nrowb;
-    int *rowbptr = spmat->rowbptr;
-    int *colbidx = spmat->colbidx;
+    size_t *rowbptr = spmat->rowbptr;
+    size_t *colbidx = spmat->colbidx;
     double *val = spmat->val;   
     #pragma omp parallel for
-    for (int i = 0; i < nrowb; i++) {
+    for (size_t i = 0; i < nrowb; i++) {
         __declspec(align(kAlignLen))
             double tmp[kAlignLen/sizeof(double)];        
-        int startb = rowbptr[i];
-        int endb = rowbptr[i + 1];
-        int row = 3 * i;
+        size_t startb = rowbptr[i];
+        size_t endb = rowbptr[i + 1];
+        size_t row = 3 * i;
         double _beta = beta;
         /* compute a row */
-        for (int j = startb; j < endb; j++) {
-            int col = 3 * colbidx[j];       
+        for (size_t j = startb; j < endb; j++) {
+            size_t col = 3 * colbidx[j];       
         #if defined(__SSE3__)
             // SSE3 kernel
             __m128d a0010 =_mm_loadu_pd (&(val[j * 9 + 0]));
@@ -108,7 +108,7 @@ void SpMV3x3(const SparseMatrix *spmat,
             __m128d a20 =_mm_set1_pd (val[j * 9 + 2]);
             __m128d a21 =_mm_set1_pd (val[j * 9 + 5]);
             __m128d a22 =_mm_set1_pd (val[j * 9 + 8]);
-            for (int k = 0; k < nrhs; k++) {
+            for (size_t k = 0; k < nrhs; k++) {
                 __m128d vx0 =_mm_set1_pd (x[k * ldx + col + 0]);
                 __m128d vx1 =_mm_set1_pd (x[k * ldx + col + 1]);
                 __m128d vx2 =_mm_set1_pd (x[k * ldx + col + 2]);
@@ -129,7 +129,7 @@ void SpMV3x3(const SparseMatrix *spmat,
             }
         #else
             // scalar kernel    
-            for (int k = 0; k < nrhs; k++) {
+            for (size_t k = 0; k < nrhs; k++) {
                 tmp[0]  = val[j * 9 + 0] * x[k * ldx + col + 0];
                 tmp[1]  = val[j * 9 + 1] * x[k * ldx + col + 0];
                 tmp[2]  = val[j * 9 + 2] * x[k * ldx + col + 0];
@@ -155,23 +155,23 @@ void SpMV3x3(const SparseMatrix *spmat,
 
 void SparseToDense(const SparseMatrix *spmat, const int ldm, double *mat)
 {
-    int nrowb = spmat->nrowb;
-    int sizeb = spmat->sizeb;
-    int sizeb2 = spmat->sizeb2;
-    int *rowbptr = spmat->rowbptr;
-    int *colbidx = spmat->colbidx;
+    size_t nrowb = spmat->nrowb;
+    size_t sizeb = spmat->sizeb;
+    size_t sizeb2 = spmat->sizeb2;
+    size_t *rowbptr = spmat->rowbptr;
+    size_t *colbidx = spmat->colbidx;
     double *val = spmat->val;
 
     memset (mat, 0, sizeof(double) * ldm * sizeb * nrowb);
-    for (int i = 0; i < nrowb; i++) {
-        int start = rowbptr[i];
-        int end = rowbptr[i + 1];
-        for (int j = start; j < end; j++) {
-            for (int p = 0; p < sizeb; p++) {
-                int row = i * sizeb + p;
-                for (int q = 0; q < sizeb; q++) {
-                    int col = colbidx[j] * sizeb + q;
-                    int idx = p * sizeb + q;
+    for (size_t i = 0; i < nrowb; i++) {
+        size_t start = rowbptr[i];
+        size_t end = rowbptr[i + 1];
+        for (size_t j = start; j < end; j++) {
+            for (size_t p = 0; p < sizeb; p++) {
+                size_t row = i * sizeb + p;
+                for (size_t q = 0; q < sizeb; q++) {
+                    size_t col = colbidx[j] * sizeb + q;
+                    size_t idx = p * sizeb + q;
                     mat[row * ldm + col] = val[j * sizeb2 + idx];
                 }
             }

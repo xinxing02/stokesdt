@@ -331,7 +331,9 @@ static void Spread(const double *rdi,
                     force0[0] = forces[i * 3 + 0] * rdi[i];
                     force0[1] = forces[i * 3 + 1] * rdi[i];
                     force0[2] = forces[i * 3 + 2] * rdi[i];
-                    SpreadKernel(porder3, &(P[i * ldP]), &(ind[i * ldind]),
+                    size_t offset_P   = (size_t) i * (size_t) ldP;
+                    size_t offset_ind = (size_t) i * (size_t) ldind;
+                    SpreadKernel(porder3, &(P[offset_P]), &(ind[offset_ind]),
                                  force0, ld3, grid);
                     i = next[i];
                 }
@@ -343,7 +345,9 @@ static void Spread(const double *rdi,
             for (int k = n8 * set; k < (set + 1) * n8; k++) {
                 int i = head[k];
                 while (i != -1) {
-                    SpreadKernel(porder3, &(P[i * ldP]), &(ind[i * ldind]),
+                    size_t offset_P   = (size_t) i * (size_t) ldP;
+                    size_t offset_ind = (size_t) i * (size_t) ldind;
+                    SpreadKernel(porder3, &(P[offset_P]), &(ind[offset_ind]),
                                  &(forces[i * 3]), ld3, grid);
                     i = next[i];
                 }
@@ -530,7 +534,7 @@ bool CreateSpmeEngine(
     pad_dim2 = FFTPadLen(pad_dim2, sizeof(double));
     spme->ld1 = pad_dim2;
     spme->ld2 = pad_dim * pad_dim2;
-    spme->ld3 = dim * pad_dim * pad_dim2;  
+    spme->ld3 = dim * pad_dim * pad_dim2; 
     spme->grid = (double *)AlignMalloc(sizeof(double) * spme->ld3 * 3);
     if (NULL == spme->grid) {
         LOG_ERROR("Creating FFT grid failed\n");
@@ -612,10 +616,10 @@ bool CreateSpmeEngine(
                   &(spme->map), &(spme->lm2));
            
     // sparse P
-    int porder2 = porder * porder;
-    int porder3 = porder2 * porder;
+    size_t porder2 = porder * porder;
+    size_t porder3 = porder2 * porder;
     spme->ldP = PadLen(porder3, sizeof(double));
-    spme->P = (double *)AlignMalloc(sizeof(double) * spme->ldP * npos);   
+    spme->P = (double *)AlignMalloc(sizeof(double) * (size_t)spme->ldP * (size_t)npos);   
     spme->ldind = PadLen(porder3, sizeof(int));
     spme->ind = (int *)AlignMalloc(sizeof(int) * spme->ldind * npos);
     if (NULL == spme->P || NULL == spme->ind) {

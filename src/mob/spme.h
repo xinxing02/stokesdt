@@ -25,7 +25,7 @@ typedef struct SpmeEngine {
     /// the Ewald parameter
     double xi;
     /// the number of particles
-    int npos;
+    size_t npos;
     /// the array of square of particle radii
     double *rdi2;
     /// the dimension of the simulation box
@@ -36,7 +36,7 @@ typedef struct SpmeEngine {
     /// the matrix P (in sparse format), \c porder^3 * np
     double *P;
     /// the leading dimension of the matrix P, \c porder^3
-    int ldP;
+    size_t ldP;
     /// the array of column indices of the matrix P
     int *ind;
     /// the leading dimension of ind

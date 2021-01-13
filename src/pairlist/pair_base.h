@@ -52,6 +52,7 @@ class PairListBase {
      * @param[out] rowptr  the array of row pointers
      * @param[out] colidx  the array of column indices
      */
+    void GetPairs(size_t *rowptr, size_t *colidx);
     void GetPairs(int *rowptr, int *colidx);
 
   protected:
